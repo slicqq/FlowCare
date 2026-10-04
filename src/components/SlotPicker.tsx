@@ -14,6 +14,7 @@ export interface PickableSlot {
   capacity: number;
   booked: number;
   departmentLabel: string;
+  slotType: 'instant' | 'approval_required' | 'waitlist';
 }
 
 /**
@@ -86,36 +87,39 @@ export function SlotPicker({
                 {s.startTime}–{s.endTime} · {free} of {s.capacity} slots free
               </p>
               <p className="mt-0.5 text-[11px] text-ink-500">{s.departmentLabel}</p>
+              <p className={`mt-1 text-[10px] font-semibold ${s.slotType === 'instant' ? 'text-brand-700' : 'text-amber-700'}`}>
+                {s.slotType === 'instant' ? 'Instant confirmation' : 'Hospital approval required'}
+              </p>
 
               {!signedIn ? (
                 <Link href="/account" className="fc-btn-ghost mt-2 w-full !min-h-[38px] !py-1.5 text-[11px]">
-                  Sign in to request
+                  Sign in to {s.slotType === 'instant' ? 'book' : 'request'}
                 </Link>
               ) : !isOpen ? (
                 <button
                   type="button"
                   onClick={() => { setOpenSlot(s.id); setError(null); }}
-                  aria-label={`Request ${s.startTime} on ${s.date}`}
+                  aria-label={`${s.slotType === 'instant' ? 'Book' : 'Request'} ${s.startTime} on ${s.date}`}
                   className="fc-btn-primary mt-2 w-full !min-h-[38px] !py-1.5 text-[11px]"
                 >
-                  Select this time <IconChevron width={13} height={13} />
+                  {s.slotType === 'instant' ? 'Book instantly' : 'Select this time'} <IconChevron width={13} height={13} />
                 </button>
               ) : (
                 <div className="mt-2 space-y-2 border-t border-ink-200 pt-2">
                   <label className="block text-[11px] font-semibold text-ink-700" htmlFor={`reason-${s.id}`}>
-                    Reason for the visit (optional)
+                    What should the hospital know? <span className="font-normal text-ink-500">(optional)</span>
                   </label>
                   <input
                     id={`reason-${s.id}`}
                     value={reason}
                     maxLength={280}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="e.g. follow-up on last month's visit"
+                    placeholder="e.g. I need a first consultation for knee pain"
                     className="w-full rounded-lg border border-ink-200 px-2 py-1.5 text-[11px]"
                   />
                   <p className="text-[10px] text-ink-500">
-                    This goes to the hospital's front desk as written. Do not describe an emergency here — for an
-                    emergency, go to the emergency department or call 108.
+                    This note is sent with your appointment request and shown to the hospital front desk. Do not
+                    describe an emergency here — for an emergency, go to the emergency department or call 108.
                   </p>
                   <div className="flex gap-1.5">
                     <button
@@ -124,7 +128,7 @@ export function SlotPicker({
                       onClick={() => submit(s.id)}
                       className="fc-btn-primary flex-1 !min-h-[38px] !py-1.5 text-[11px] disabled:opacity-60"
                     >
-                      {busy ? 'Sending…' : 'Request this time'}
+                      {busy ? (s.slotType === 'instant' ? 'Booking…' : 'Sending…') : s.slotType === 'instant' ? 'Book now' : 'Request this time'}
                     </button>
                     <button
                       type="button"
@@ -142,8 +146,9 @@ export function SlotPicker({
         })}
       </div>
       <p className="mt-3 text-[11px] text-ink-500">
-        Requesting a slot does not confirm it. The hospital confirms or declines, and FlowCare shows the outcome on
-        your visits page.
+        {slots.some((s) => s.slotType === 'instant')
+          ? 'Instant slots are confirmed immediately when booked. Other slots remain requests until the hospital confirms them.'
+          : 'Requesting a slot does not confirm it. The hospital confirms or declines, and FlowCare shows the outcome on your visits page.'}
       </p>
     </div>
   );

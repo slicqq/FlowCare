@@ -39,6 +39,62 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Greetings should receive a conversational response instead of being
+    // treated as a hospital keyword search. This stays server-side so every
+    // assistant request still uses the same backend contract and rate limit.
+    if (/^(hi+|hey|hello+|hie|namaste|good\s+(morning|afternoon|evening))[!.?,\s]*$/i.test(body.query.trim())) {
+      return ok({
+        reply: 'Hi! I can help you find and compare hospitals, departments, accessibility options, and available appointments. What are you looking for?',
+        understood: {
+          filters: {},
+          explanation: [],
+          source: 'deterministic',
+          provider: null,
+          model: null,
+          latencyMs: null,
+        },
+        aiUnavailableReason: null,
+        safetyNotice: null,
+        scopeNotice: SCOPE_NOTICE,
+        locationNotice: null,
+        results: [],
+        total: 0,
+        emptyReason: null,
+        computedAt: new Date().toISOString(),
+      });
+    }
+
+    const normalizedQuery = body.query.trim().toLowerCase().replace(/loacation/g, 'location').replace(/\s+/g, ' ');
+    if (
+      /\bwhere\s+am\s+i\b/i.test(normalizedQuery)
+      || /\bwhat(?:'s| is)\s+my\s+(?:current\s+)?location\b/i.test(normalizedQuery)
+      || /\b(can\s+you|can\s+u)\s+(?:tell|show)\s+(?:me\s+)?(?:my\s+)?(?:current\s+)?location\b/i.test(normalizedQuery)
+      || /\bmy\s+(?:current\s+)?location\b/i.test(normalizedQuery)
+    ) {
+      const hasLocation = Boolean(body.location);
+      return ok({
+        reply: hasLocation
+          ? 'Your device location is available to FlowCare for nearby-hospital searches. For privacy, I do not display your exact coordinates or street address here.'
+          : 'I do not have your device location yet. Tap Use my location below, allow browser access, and ask me again. You can also search by city or area.',
+        understood: {
+          filters: {},
+          explanation: [],
+          source: 'deterministic',
+          provider: null,
+          model: null,
+          latencyMs: null,
+        },
+        aiUnavailableReason: null,
+        safetyNotice: null,
+        scopeNotice: SCOPE_NOTICE,
+        locationNotice: hasLocation ? 'Location access is on for this chat session.' : null,
+        results: [],
+        total: 0,
+        emptyReason: null,
+        computedAt: new Date().toISOString(),
+      });
+    }
+
     // One application-owned provider. The browser cannot select a vendor or
     // supply a credential; changing providers later is a server-only change.
     const provider = getProvider('gemini');
